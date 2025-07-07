@@ -14,7 +14,7 @@ async def main(workspace_directory: str):
 
     while True:
         user_prompt = input("What do you want to build?: \n")
-        messages = await run_agent(user_prompt, messages, messages_file_path)
+        messages = await run_agent(user_prompt, messages, workspace_directory)
 
 
 if __name__ == "__main__":

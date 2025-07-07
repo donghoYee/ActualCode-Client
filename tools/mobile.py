@@ -59,6 +59,7 @@ class MobileTool:
             notification_id = notification_response["notification_id"]
 
             startTime = time.time()
+            print(f"Waiting for photo", end="")
             while time.time() - startTime < timeout:
                 status_request_data = {
                     "notification_id": notification_id,
@@ -67,9 +68,11 @@ class MobileTool:
                 notification_status = status_response["notification_status"]
                 if notification_status == "waiting":
                     await asyncio.sleep(1)
+                    print(".", end="", flush=True)
                     continue
                 elif notification_status == "done":
                     file_url = status_response["data"]["file_url"]
+                    print("Photo taken!")
                     return {
                         "type": "image",
                         "file_url": file_url
@@ -79,7 +82,10 @@ class MobileTool:
                         "type": "text",
                         "text": f"Error in request_photo_tool. Status: {notification_status}"
                     }
-
+            return {
+                "type": "text",
+                "text": f"Error in request_photo_tool. Reason: timed out while waiting for photo"
+            }
 
     async def request_video_tool(self, instruction: str, fps=1, timeout=60*10) -> list:
         notification_data = {
@@ -92,6 +98,7 @@ class MobileTool:
             notification_id = notification_response["notification_id"]
 
             startTime = time.time()
+            print("Waiting for video", end="")
             while time.time() - startTime < timeout:
                 status_request_data = {
                     "notification_id": notification_id,
@@ -100,9 +107,11 @@ class MobileTool:
                 notification_status = status_response["notification_status"]
                 if notification_status == "waiting":
                     await asyncio.sleep(1)
+                    print(".", end="", flush=True)
                     continue
                 elif notification_status == "done":
                     file_url = status_response["data"]["file_url"]
+                    print("Video taken!")
                     return {
                         "type": "video",
                         "file_url": file_url,
@@ -111,9 +120,12 @@ class MobileTool:
                 else:
                     return {
                         "type": "text",
-                        "text": f"Error in request_photo_tool. Status: {notification_status}"
+                        "text": f"Error in request_video_tool. Status: {notification_status}"
                     }
-
+            return {
+                "type": "text",
+                "text": f"Error in request_video_tool. Reason: timed out while waiting for video"
+            }
 
 if __name__ == "__main__":
     mobileTool = MobileTool()
