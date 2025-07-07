@@ -1,7 +1,8 @@
 from google import genai
 from google.genai import types
 import utils
-from tools import mobile
+from tools import mobile, edit
+from tools.base import ToolError
 import prompt
 import logging
 from google.genai import types
@@ -16,7 +17,8 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
     messages_file_path = os.path.join(workspace_directory, ".actualCodeMessagesData")
     client = genai.Client()
     mobileTool = mobile.MobileTool()
-    function_declarations = mobileTool.definitions
+    editTool = edit.EditTool(workspace_directory)
+    function_declarations = mobileTool.definitions + editTool.definitions
     tools = types.Tool(function_declarations=function_declarations)
     config = types.GenerateContentConfig(tools=[tools], 
                                          system_instruction=prompt.SYSTEM_PROMPT,                                    
@@ -49,6 +51,9 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
             elif function_name == "request_video_tool":
                 parts, uploaded_file = await handle_request_video_tool(client, mobileTool, function_name, function_args, parts, workspace_directory)
                 if uploaded_file is not None: uploaded_files.append(uploaded_file)
+            elif function_name == "text_editor_tool":
+                parts = await handle_text_editor_tool(client, editTool, function_name, function_args, parts, workspace_directory)
+            
         messages.append(types.Content(role="user", parts=parts))
         messages += uploaded_files # Take care of uploaded files
         response = client.models.generate_content(
@@ -68,6 +73,7 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
 
 
 async def handle_request_photo_tool(client: genai.Client, mobileTool: mobile.MobileTool, function_name: str,function_args: dict, parts: list, workspace_directory: str):
+    logging.warning(f"Function {function_name} called. Args: {function_args}")
     request_photo_tool_result = await mobileTool.request_photo_tool(function_args["instruction"], 60*10)
     uploaded_file = None
     if request_photo_tool_result["type"] == "text":
@@ -97,6 +103,7 @@ async def handle_request_photo_tool(client: genai.Client, mobileTool: mobile.Mob
 
 
 async def handle_request_video_tool(client: genai.Client, mobileTool: mobile.MobileTool, function_name: str,function_args: dict, parts: list, workspace_directory: str):
+    logging.warning(f"Function {function_name} called. Args: {function_args}")
     request_video_tool_result = await mobileTool.request_video_tool(function_args["instruction"], function_args.get("fps", 1), 60*10)
     uploaded_file = None
     if request_video_tool_result["type"] == "text":
@@ -124,3 +131,22 @@ async def handle_request_video_tool(client: genai.Client, mobileTool: mobile.Mob
         print(f"FPS: {function_args.get("fps", 1)}")
         
     return parts, uploaded_file
+
+
+async def handle_text_editor_tool(client: genai.Client, editTool: edit.EditTool, function_name: str, function_args: dict, parts: list, workspace_directory: str):
+    logging.warning(f"Function {function_name} called. Args: {function_args}")
+    try:
+        result = await editTool(**function_args)
+    except ToolError as e:
+        parts.append(types.Part.from_function_response(
+            name=function_name,
+            response={"error": e.message},
+        ))
+        return parts
+    parts.append(types.Part.from_function_response(
+            name=function_name,
+            response={"result": result["text"]},
+        ))
+    print(parts)
+    return parts
+
