@@ -13,7 +13,10 @@ async def main(workspace_directory: str):
     messages = utils.load_messages(messages_file_path)
 
     while True:
-        user_prompt = input("What do you want to build?: \n")
+        if len(messages) == 0:
+            user_prompt = input("What do you want to build?: \n")
+        else:
+            user_prompt = input("Prompt: ")
         messages = await run_agent(user_prompt, messages, workspace_directory)
 
 

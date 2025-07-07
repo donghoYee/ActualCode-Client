@@ -6,6 +6,9 @@ from pathlib import Path
 from .base import ToolError
 from .run import run
 
+SNIPPET_LINES: int = 4
+
+
 class EditTool():
     def __init__(self, workspace_directory: str):
         self.workspace_directory = workspace_directory
@@ -80,8 +83,24 @@ class EditTool():
                 "type": "text",
                 "text": f"File created successfully at: {relative_path}"
             }
+        elif command == "str_replace":
+            if old_str is None:
+                raise ToolError(
+                    "Parameter `old_str` is required for command: str_replace"
+                )
+            return self.str_replace(absolute_path, relative_path, old_str, new_str)
+        elif command == "insert":
+            if insert_line is None:
+                raise ToolError(
+                    "Parameter `insert_line` is required for command: insert"
+                )
+            if new_str is None:
+                raise ToolError("Parameter `new_str` is required for command: insert")
+            return self.insert(absolute_path, relative_path, insert_line, new_str)
         
-        
+        raise ToolError(
+            f'Unrecognized command {command}. The allowed commands for the text_editor_tool tool are: {", ".join(["view", "create", "str_replace", "insert",])}'
+        )
         
     def validate_path(self, command: str, absolute_path: Path, relative_path: str):
         """
@@ -170,6 +189,100 @@ class EditTool():
             absolute_path.write_text(file)
         except Exception as e:
             raise ToolError(f"Ran into {e} while trying to write to {relative_path}") from None
+        
+        
+    def str_replace(self, absolute_path: Path, relative_path: str, old_str: str, new_str: str | None):
+        """Implement the str_replace command, which replaces old_str with new_str in the file content"""
+        # Read the file content
+        file_content = self.read_file(absolute_path, relative_path).expandtabs()
+        old_str = old_str.expandtabs()
+        new_str = new_str.expandtabs() if new_str is not None else ""
+
+        # Check if old_str is unique in the file
+        occurrences = file_content.count(old_str)
+        if occurrences == 0:
+            raise ToolError(
+                f"No replacement was performed, old_str `{old_str}` did not appear verbatim in {relative_path}."
+            )
+        elif occurrences > 1:
+            file_content_lines = file_content.split("\n")
+            lines = [
+                idx + 1
+                for idx, line in enumerate(file_content_lines)
+                if old_str in line
+            ]
+            raise ToolError(
+                f"No replacement was performed. Multiple occurrences of old_str `{old_str}` in lines {lines}. Please ensure it is unique"
+            )
+
+        # Replace old_str with new_str
+        new_file_content = file_content.replace(old_str, new_str)
+
+        # Write the new content to the file
+        self.write_file(absolute_path, relative_path, new_file_content)
+
+        # Save the content to history
+        self._file_history[relative_path].append(file_content)
+
+        # Create a snippet of the edited section
+        replacement_line = file_content.split(old_str)[0].count("\n")
+        start_line = max(0, replacement_line - SNIPPET_LINES)
+        end_line = replacement_line + SNIPPET_LINES + new_str.count("\n")
+        snippet = "\n".join(new_file_content.split("\n")[start_line : end_line + 1])
+
+        # Prepare the success message
+        success_msg = f"The file {relative_path} has been edited. "
+        success_msg += self._make_output(
+            snippet, f"a snippet of {relative_path}", start_line + 1
+        )
+        success_msg += "Review the changes and make sure they are as expected. Edit the file again if necessary."
+
+        return {
+            "type": "text",
+            "text": success_msg
+        }
+    
+    def insert(self, absolute_path: Path, relative_path: str, insert_line: int, new_str: str):
+        """Implement the insert command, which inserts new_str at the specified line in the file content."""
+        file_text = self.read_file(absolute_path, relative_path).expandtabs()
+        new_str = new_str.expandtabs()
+        file_text_lines = file_text.split("\n")
+        n_lines_file = len(file_text_lines)
+
+        if insert_line < 0 or insert_line > n_lines_file:
+            raise ToolError(
+                f"Invalid `insert_line` parameter: {insert_line}. It should be within the range of lines of the file: {[0, n_lines_file]}"
+            )
+
+        new_str_lines = new_str.split("\n")
+        new_file_text_lines = (
+            file_text_lines[:insert_line]
+            + new_str_lines
+            + file_text_lines[insert_line:]
+        )
+        snippet_lines = (
+            file_text_lines[max(0, insert_line - SNIPPET_LINES) : insert_line]
+            + new_str_lines
+            + file_text_lines[insert_line : insert_line + SNIPPET_LINES]
+        )
+
+        new_file_text = "\n".join(new_file_text_lines)
+        snippet = "\n".join(snippet_lines)
+
+        self.write_file(absolute_path, relative_path, new_file_text)
+        self._file_history[relative_path].append(file_text)
+
+        success_msg = f"The file {relative_path} has been edited. "
+        success_msg += self._make_output(
+            snippet,
+            "a snippet of the edited file",
+            max(1, insert_line - SNIPPET_LINES + 1),
+        )
+        success_msg += "Review the changes and make sure they are as expected (correct indentation, no duplicate lines, etc). Edit the file again if necessary."
+        return {
+            "type": "text",
+            "text": success_msg
+        }
         
         
     def _make_output(

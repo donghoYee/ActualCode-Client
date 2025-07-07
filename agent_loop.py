@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 import utils
-from tools import mobile, edit
+from tools import mobile, edit, bash
 from tools.base import ToolError
 import prompt
 import logging
@@ -18,7 +18,8 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
     client = genai.Client()
     mobileTool = mobile.MobileTool()
     editTool = edit.EditTool(workspace_directory)
-    function_declarations = mobileTool.definitions + editTool.definitions
+    bashTool = bash.BashTool(workspace_directory)
+    function_declarations = mobileTool.definitions + editTool.definitions + bashTool.definitions
     tools = types.Tool(function_declarations=function_declarations)
     config = types.GenerateContentConfig(tools=[tools], 
                                          system_instruction=prompt.SYSTEM_PROMPT,                                    
@@ -53,6 +54,8 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
                 if uploaded_file is not None: uploaded_files.append(uploaded_file)
             elif function_name == "text_editor_tool":
                 parts = await handle_text_editor_tool(client, editTool, function_name, function_args, parts, workspace_directory)
+            elif function_name == "bash_tool":
+                parts = await handle_bash_tool(client, bashTool, function_name, function_args, parts, workspace_directory)
             
         messages.append(types.Content(role="user", parts=parts))
         messages += uploaded_files # Take care of uploaded files
@@ -146,7 +149,23 @@ async def handle_text_editor_tool(client: genai.Client, editTool: edit.EditTool,
     parts.append(types.Part.from_function_response(
             name=function_name,
             response={"result": result["text"]},
+    ))
+    return parts
+
+
+async def handle_bash_tool(client: genai.Client, bashTool: bash.BashTool, function_name: str, function_args: dict, parts: list, workspace_directory: str):
+    logging.warning(f"Function {function_name} called. Args: {function_args}")
+    try:
+        result = await bashTool(**function_args)
+    except ToolError as e:
+        parts.append(types.Part.from_function_response(
+            name=function_name,
+            response={"error": e.message},
         ))
-    print(parts)
+        return parts
+    parts.append(types.Part.from_function_response(
+            name=function_name,
+            response={"result": result["text"]},
+    ))
     return parts
 
