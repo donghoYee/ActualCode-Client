@@ -131,7 +131,7 @@ async def handle_request_video_tool(client: genai.Client, mobileTool: mobile.Mob
 
         if uploaded_file.state.name == "FAILED":
             raise ValueError(uploaded_file.state.name)
-        print(f"FPS: {function_args.get("fps", 1)}")
+        print(f"FPS: {function_args.get('fps', 1)}")
         
     return parts, uploaded_file
 
