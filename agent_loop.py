@@ -43,19 +43,23 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
         if len(function_call_datas) == 0: break # No function called. Job done
         parts = []
         uploaded_files = []
+        tasks = []
         for function_call_data in function_call_datas:
             function_args = function_call_data.args
             function_name = function_call_data.name
             if function_name == "request_photo_tool":
-                parts, uploaded_file = await handle_request_photo_tool(client, mobileTool, function_name, function_args, parts, workspace_directory)
-                if uploaded_file is not None: uploaded_files.append(uploaded_file)
+                tasks.append(handle_request_photo_tool(client, mobileTool, function_name, function_args, workspace_directory))
             elif function_name == "request_video_tool":
-                parts, uploaded_file = await handle_request_video_tool(client, mobileTool, function_name, function_args, parts, workspace_directory)
-                if uploaded_file is not None: uploaded_files.append(uploaded_file)
+                tasks.append(handle_request_video_tool(client, mobileTool, function_name, function_args, workspace_directory))
             elif function_name == "text_editor_tool":
-                parts = await handle_text_editor_tool(client, editTool, function_name, function_args, parts, workspace_directory)
+                tasks.append(handle_text_editor_tool(client, editTool, function_name, function_args, workspace_directory))
             elif function_name == "bash_tool":
-                parts = await handle_bash_tool(client, bashTool, function_name, function_args, parts, workspace_directory)
+                tasks.append(handle_bash_tool(client, bashTool, function_name, function_args, workspace_directory))
+                
+        results = await asyncio.gather(*tasks)
+        for new_parts, new_uploaded_files in results:
+            parts += new_parts
+            uploaded_files += new_uploaded_files
             
         messages.append(types.Content(role="user", parts=parts))
         messages += uploaded_files # Take care of uploaded files
@@ -75,8 +79,9 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
 
 
 
-async def handle_request_photo_tool(client: genai.Client, mobileTool: mobile.MobileTool, function_name: str,function_args: dict, parts: list, workspace_directory: str):
+async def handle_request_photo_tool(client: genai.Client, mobileTool: mobile.MobileTool, function_name: str,function_args: dict, workspace_directory: str):
     logging.warning(f"Function {function_name} called. Args: {function_args}")
+    parts = []
     request_photo_tool_result = await mobileTool.request_photo_tool(function_args["instruction"], 60*10)
     uploaded_file = None
     if request_photo_tool_result["type"] == "text":
@@ -102,11 +107,12 @@ async def handle_request_photo_tool(client: genai.Client, mobileTool: mobile.Mob
         if uploaded_file.state.name == "FAILED":
             raise ValueError(uploaded_file.state.name)
         
-    return parts, uploaded_file
+    return parts, [uploaded_file,]
 
 
-async def handle_request_video_tool(client: genai.Client, mobileTool: mobile.MobileTool, function_name: str,function_args: dict, parts: list, workspace_directory: str):
+async def handle_request_video_tool(client: genai.Client, mobileTool: mobile.MobileTool, function_name: str,function_args: dict, workspace_directory: str):
     logging.warning(f"Function {function_name} called. Args: {function_args}")
+    parts = []
     request_video_tool_result = await mobileTool.request_video_tool(function_args["instruction"], function_args.get("fps", 1), 60*10)
     uploaded_file = None
     if request_video_tool_result["type"] == "text":
@@ -133,11 +139,12 @@ async def handle_request_video_tool(client: genai.Client, mobileTool: mobile.Mob
             raise ValueError(uploaded_file.state.name)
         print(f"FPS: {function_args.get('fps', 1)}")
         
-    return parts, uploaded_file
+    return parts, [uploaded_file, ]
 
 
-async def handle_text_editor_tool(client: genai.Client, editTool: edit.EditTool, function_name: str, function_args: dict, parts: list, workspace_directory: str):
+async def handle_text_editor_tool(client: genai.Client, editTool: edit.EditTool, function_name: str, function_args: dict, workspace_directory: str):
     logging.warning(f"Function {function_name} called. Args: {function_args}")
+    parts = []
     try:
         result = await editTool(**function_args)
     except ToolError as e:
@@ -150,11 +157,12 @@ async def handle_text_editor_tool(client: genai.Client, editTool: edit.EditTool,
             name=function_name,
             response={"result": result["text"]},
     ))
-    return parts
+    return parts, []
 
 
-async def handle_bash_tool(client: genai.Client, bashTool: bash.BashTool, function_name: str, function_args: dict, parts: list, workspace_directory: str):
+async def handle_bash_tool(client: genai.Client, bashTool: bash.BashTool, function_name: str, function_args: dict, workspace_directory: str):
     logging.warning(f"Function {function_name} called. Args: {function_args}")
+    parts = []
     try:
         result = await bashTool(**function_args)
     except ToolError as e:
@@ -167,5 +175,5 @@ async def handle_bash_tool(client: genai.Client, bashTool: bash.BashTool, functi
             name=function_name,
             response={"result": result["text"]},
     ))
-    return parts
+    return parts, []
 
