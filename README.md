@@ -24,8 +24,8 @@ Whether you're a scientist, engineer, hobbyist, or educator, Actual Code can gui
 1. **Clone This Repository**
 
    ```bash
-   git clone https://github.com/yourusername/actual-code.git
-   cd actual-code
+   git clone https://github.com/donghoYee/ActualCode-Client.git
+   cd ActualCode-Client
    ```
 
 2. **Install Requirements**
