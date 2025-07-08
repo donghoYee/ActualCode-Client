@@ -159,7 +159,7 @@ async def handle_request_video_tool(client: genai.Client, mobileTool: mobile.Mob
 
 
 async def handle_text_editor_tool(client: genai.Client, editTool: edit.EditTool, function_name: str, function_args: dict, workspace_directory: str):
-    logging.warning(f"Function {function_name} called. Args: {function_args}")
+    logging.warning(f"Function {function_name} called. Command: {function_args["command"]}, Path: {function_args["path"]}")
     parts = []
     try:
         result = await editTool(**function_args)
