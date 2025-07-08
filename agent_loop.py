@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 import utils
-from tools import mobile, edit, bash, search, web_fetch
+from tools import mobile, edit, bash, search, web_fetch, multimedia_reader
 from tools.base import ToolError
 import prompt
 import logging
@@ -21,12 +21,16 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
     bashTool = bash.BashTool(workspace_directory)
     searchTool = search.SearchTool(workspace_directory, client)
     webFetchTool = web_fetch.WebFetchTool(workspace_directory, client)
-    function_declarations = mobileTool.definitions + editTool.definitions + bashTool.definitions + searchTool.definitions + webFetchTool.definitions
+    multimediaReaderTool = multimedia_reader.MultimediaReaderTool(workspace_directory, client)
+    
+    function_declarations = mobileTool.definitions + editTool.definitions + bashTool.definitions + searchTool.definitions + webFetchTool.definitions + multimediaReaderTool.definitions
     tools = types.Tool(function_declarations=function_declarations)
     config = types.GenerateContentConfig(tools=[tools, ], 
                                          system_instruction=prompt.SYSTEM_PROMPT,                                    
     )
-    messages.append(types.Content(role="user", parts=[types.Part(text=user_prompt)]))
+    
+    workspace_files = await utils.workspace_files(workspace_directory)
+    messages.append(types.Content(role="user", parts=[types.Part(text=workspace_files), types.Part(text=user_prompt)]))
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=messages,
@@ -62,6 +66,8 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
                 tasks.append(handle_search_tool(client, searchTool, function_name, function_args, workspace_directory))
             elif function_name == "web_fetch_tool":
                 tasks.append(handle_web_fetch_tool(client, webFetchTool, function_name, function_args, workspace_directory))
+            elif function_name == "multimedia_reader_tool":
+                tasks.append(handle_multimedia_reader_tool(client, multimediaReaderTool, function_name, function_args, workspace_directory))
             else:
                 raise ValueError(f"Function {function_name} not found!") 
                
@@ -70,7 +76,8 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
             parts += new_parts
             uploaded_files += new_uploaded_files
             
-        messages.append(types.Content(role="user", parts=parts))
+        workspace_files = await utils.workspace_files(workspace_directory)
+        messages.append(types.Content(role="user", parts=[types.Part(text=workspace_files)] + parts))
         messages += uploaded_files # Take care of uploaded files
         response = client.models.generate_content(
             model="gemini-2.5-flash",
@@ -225,3 +232,25 @@ async def handle_web_fetch_tool(client: genai.Client, webFetchTool: web_fetch.We
     logging.warning(f"Web fetch complete.")
     print(result["text"])
     return parts, []
+
+
+async def handle_multimedia_reader_tool(client: genai.Client, multimediaReaderTool: multimedia_reader.MultimediaReaderTool, function_name: str, function_args: dict, workspace_directory: str):
+    logging.warning(f"Function {function_name} called. Args: {function_args}")
+    parts = []
+    try:
+        result = await multimediaReaderTool(**function_args)
+    except ToolError as e:
+        parts.append(types.Part.from_function_response(
+            name=function_name,
+            response={"error": e.message},
+        ))
+        return parts, []
+    parts.append(types.Part.from_function_response(
+            name=function_name,
+            response={"result": result[0]["text"]},
+    ))
+    logging.warning(f"Web fetch complete.")
+    print(result[0]["text"])
+    return parts, result[1]["files"]
+
+

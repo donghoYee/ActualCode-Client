@@ -6,6 +6,7 @@ import aiohttp
 import aiofiles
 import asyncio
 from urllib.parse import urlparse
+from tools.run import run
 
 
 def load_messages(file_path: str) -> list:
@@ -56,3 +57,12 @@ async def download_files(urls, folder):
     async with aiohttp.ClientSession() as session:
         tasks = [download_file(session, url, folder) for url in urls]
         return await asyncio.gather(*tasks)
+
+
+
+async def workspace_files(workspace_directory: str):
+    _, stdout, stderr = await run(
+        rf"cd {workspace_directory} && find ./ -maxdepth 2 -not -path '*/\.*'"
+    )
+    outputStr = f"Here's the files and directories up to 2 levels deep in workspace directory({workspace_directory}), excluding hidden items:\n{stdout}\n"
+    return outputStr
