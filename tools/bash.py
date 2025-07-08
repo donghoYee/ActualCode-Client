@@ -125,16 +125,19 @@ class _BashSession:
 
         # read output from the process, until the sentinel is found
         try:
+            print("Bash command in progress...")
             async with asyncio.timeout(self._timeout):
                 while True:
                     await asyncio.sleep(self._output_delay)
                     # if we read directly from stdout/stderr, it will wait forever for
                     # EOF. use the StreamReader buffer directly instead.
                     output = self._process.stdout._buffer.decode()  # pyright: ignore[reportAttributeAccessIssue]
+                    print(output, end="")
                     if self._sentinel in output:
                         # strip the sentinel and break
                         output = output[: output.index(self._sentinel)]
                         break
+            print("Done")
         except asyncio.TimeoutError:
             self._timed_out = True
             raise ToolError(
