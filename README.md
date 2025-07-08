@@ -1,5 +1,7 @@
 # Actual Code
 
+![alt text](https://api.actualcode.org/uploads/actualcode_horizontal.png)
+
 **Actual Code** is an AI-powered CLI coding agent designed to help you build, test, and deploy programs for real-world hardware projects—no matter your programming skill level.
 
 Whether you're a scientist, engineer, hobbyist, or educator, Actual Code can guide you through wiring, coding, configuration, and troubleshooting for platforms like Raspberry Pi, Arduino, and other microcontrollers. It automates much of the tedious work by reading datasheets, searching for documentation, and generating runnable code tailored to your project.
