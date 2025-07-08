@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 import utils
-from tools import mobile, edit, bash
+from tools import mobile, edit, bash, search, web_fetch
 from tools.base import ToolError
 import prompt
 import logging
@@ -19,9 +19,11 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
     mobileTool = mobile.MobileTool()
     editTool = edit.EditTool(workspace_directory)
     bashTool = bash.BashTool(workspace_directory)
-    function_declarations = mobileTool.definitions + editTool.definitions + bashTool.definitions
+    searchTool = search.SearchTool(workspace_directory, client)
+    webFetchTool = web_fetch.WebFetchTool(workspace_directory, client)
+    function_declarations = mobileTool.definitions + editTool.definitions + bashTool.definitions + searchTool.definitions + webFetchTool.definitions
     tools = types.Tool(function_declarations=function_declarations)
-    config = types.GenerateContentConfig(tools=[tools], 
+    config = types.GenerateContentConfig(tools=[tools, ], 
                                          system_instruction=prompt.SYSTEM_PROMPT,                                    
     )
     messages.append(types.Content(role="user", parts=[types.Part(text=user_prompt)]))
@@ -44,6 +46,7 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
         parts = []
         uploaded_files = []
         tasks = []
+        
         for function_call_data in function_call_datas:
             function_args = function_call_data.args
             function_name = function_call_data.name
@@ -55,7 +58,13 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
                 tasks.append(handle_text_editor_tool(client, editTool, function_name, function_args, workspace_directory))
             elif function_name == "bash_tool":
                 tasks.append(handle_bash_tool(client, bashTool, function_name, function_args, workspace_directory))
-                
+            elif function_name == "search_tool":
+                tasks.append(handle_search_tool(client, searchTool, function_name, function_args, workspace_directory))
+            elif function_name == "web_fetch_tool":
+                tasks.append(handle_web_fetch_tool(client, webFetchTool, function_name, function_args, workspace_directory))
+            else:
+                raise ValueError(f"Function {function_name} not found!") 
+               
         results = await asyncio.gather(*tasks)
         for new_parts, new_uploaded_files in results:
             parts += new_parts
@@ -152,7 +161,7 @@ async def handle_text_editor_tool(client: genai.Client, editTool: edit.EditTool,
             name=function_name,
             response={"error": e.message},
         ))
-        return parts
+        return parts, []
     parts.append(types.Part.from_function_response(
             name=function_name,
             response={"result": result["text"]},
@@ -170,10 +179,49 @@ async def handle_bash_tool(client: genai.Client, bashTool: bash.BashTool, functi
             name=function_name,
             response={"error": e.message},
         ))
-        return parts
+        return parts, []
     parts.append(types.Part.from_function_response(
             name=function_name,
             response={"result": result["text"]},
     ))
     return parts, []
 
+
+async def handle_search_tool(client: genai.Client, searchTool: search.SearchTool, function_name: str, function_args: dict, workspace_directory: str):
+    logging.warning(f"Function {function_name} called. Args: {function_args}")
+    parts = []
+    try:
+        result = await searchTool(**function_args)
+    except ToolError as e:
+        parts.append(types.Part.from_function_response(
+            name=function_name,
+            response={"error": e.message},
+        ))
+        return parts, []
+    parts.append(types.Part.from_function_response(
+            name=function_name,
+            response={"result": result["text"]},
+    ))
+    logging.warning(f"Search complete.")
+    print(result["text"])
+    return parts, []
+
+
+async def handle_web_fetch_tool(client: genai.Client, webFetchTool: web_fetch.WebFetchTool, function_name: str, function_args: dict, workspace_directory: str):
+    logging.warning(f"Function {function_name} called. Args: {function_args}")
+    parts = []
+    try:
+        result = await webFetchTool(**function_args)
+    except ToolError as e:
+        parts.append(types.Part.from_function_response(
+            name=function_name,
+            response={"error": e.message},
+        ))
+        return parts, []
+    parts.append(types.Part.from_function_response(
+            name=function_name,
+            response={"result": result["text"]},
+    ))
+    logging.warning(f"Web fetch complete.")
+    print(result["text"])
+    return parts, []
