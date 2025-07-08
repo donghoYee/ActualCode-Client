@@ -21,7 +21,14 @@ Whether you're a scientist, engineer, hobbyist, or educator, Actual Code can gui
 
 ## How to Use
 
-1. **Install Requirements**
+1. **Clone This Repository**
+
+   ```bash
+   git clone https://github.com/yourusername/actual-code.git
+   cd actual-code
+   ```
+
+2. **Install Requirements**
 
    ```bash
    pip install -r requirements.txt
@@ -31,7 +38,7 @@ Whether you're a scientist, engineer, hobbyist, or educator, Actual Code can gui
    If you plan to use Python for your hardware project, it's best to run Actual Code and your project **in the same Python environment** (such as a virtualenv or venv).  
    This way, any packages installed by the agent will be available for both development and testing—making your workflow much smoother and fully automated.
 
-2. **Set Up API Keys**
+3. **Set Up API Keys**
 
    Create a `.env` file in your project root and add your API keys:
 
@@ -42,7 +49,7 @@ Whether you're a scientist, engineer, hobbyist, or educator, Actual Code can gui
 
    ACTUALCODE_API_KEY can be made in https://actualcode.org along with the link to download mobile app.
 
-3. **Run the CLI Agent**
+4. **Run the CLI Agent**
 
    Use the following command to start Actual Code in CLI mode, specifying your project folder as the workspace directory:
 
