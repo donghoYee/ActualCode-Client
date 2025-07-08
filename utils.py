@@ -7,6 +7,7 @@ import aiofiles
 import asyncio
 from urllib.parse import urlparse
 from tools.run import run
+import platform, socket, re, uuid, json, psutil
 
 
 def load_messages(file_path: str) -> list:
@@ -66,3 +67,26 @@ async def workspace_files(workspace_directory: str):
     )
     outputStr = f"Here's the files and directories up to 2 levels deep in workspace directory({workspace_directory}), excluding hidden items:\n{stdout}\n"
     return outputStr
+
+
+
+
+def getSystemInfo():
+    try:
+        info={}
+        info['platform']=platform.system()
+        info['platform-release']=platform.release()
+        info['platform-version']=platform.version()
+        info['architecture']=platform.machine()
+        info['hostname']=socket.gethostname()
+        info['ip-address']=socket.gethostbyname(socket.gethostname())
+        info['mac-address']=':'.join(re.findall('..', '%012x' % uuid.getnode()))
+        info['processor']=platform.processor()
+        info['ram']=str(round(psutil.virtual_memory().total / (1024.0 **3)))+" GB"
+        return info
+    except Exception as e:
+        logging.exception(e)
+        
+
+if __name__ == "__main__":
+    print(getSystemInfo())
