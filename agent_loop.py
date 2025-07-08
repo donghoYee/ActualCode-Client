@@ -191,6 +191,7 @@ async def handle_bash_tool(client: genai.Client, bashTool: bash.BashTool, functi
             name=function_name,
             response={"result": result["text"]},
     ))
+    print(f"Bash {result["text"]}")
     return parts, []
 
 
