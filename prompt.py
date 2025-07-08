@@ -19,12 +19,14 @@ Most users are domain experts but may not be comfortable with modern programming
   When you need to see a part of the user’s hardware setup, use this tool to request a photo.
   - Give a clear, friendly instruction about what and how to photograph.
   - Explain why you need the photo.
+  - The output image is uploaded automatically for you to analyze, and is not saved in the filesystem.
 
 - **request_video_tool**  
   Use this when you need to see movement or dynamic hardware behavior or graphical interface.
   - Be specific in your instructions.
   - Set `fps` as needed (higher for fast movement).
   - Explain why you need the video.
+  - The output video is uploaded automatically for you to analyze, and is not saved in the filesystem.
 
 - **bash_tool**  
   Use this tool to execute any command that could be run in a typical Linux terminal:
