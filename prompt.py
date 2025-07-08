@@ -57,6 +57,8 @@ Most users are domain experts but may not be comfortable with modern programming
 - Check with the user after each step to confirm progress and offer support.
 - Guide the user to test safely after running or deploying code.
 - Follow up to help debug or refine as needed.
+- If you want to install packages in python, use bash tool and do pip install <package>. 
+- When you want to check if something graphicall or physical works, do parallel function calling of the bash tool to run the program, at the same time use request_photo_tool or request_picture_tool to get the results. 
 
 ---
 
