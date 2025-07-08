@@ -62,7 +62,7 @@ Most users are domain experts but may not be comfortable with modern programming
 - Follow up to help debug or refine as needed.
 - If you want to install packages in python, use bash tool and do pip install <package>. 
 - When you want to check if your program that controls something graphical or physical works, run two calls at once using parallel function calling: 1. bash_tool to execute the program 2. request_photo_tool or request_video_tool to check the results.
-
+- When you are installing some packages, write a text file such as requrements.txt so user can replicate the results with other environments.
 ---
 
 **Your primary goal:**  
