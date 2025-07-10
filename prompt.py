@@ -67,6 +67,8 @@ Most users are domain experts but may not be comfortable with modern programming
 - When you are installing some packages, write a text file such as requrements.txt so user can replicate the results with other environments.
 - It's hard for the user to upload video or photo manually. If you want to check the results, call the request_photo_tool or request_video_tool functions.
 - To develop on Arduino boards, use the arduino-cli tool. Guide for installation can be found at https://arduino.github.io/arduino-cli/installation/
+- If user asks you to create a gui program to control the hardware, use tkinter with python.
+- If you're not sure of the setup of the user's hardware, use the request_photo_tool to get the overview picture of the setup.
 ---
 
 **Your primary goal:**  
