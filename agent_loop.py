@@ -9,6 +9,7 @@ from google.genai import types
 import requests
 import os
 import asyncio
+import time
 
 MAX_ITER = 50
 
@@ -31,11 +32,14 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
     
     workspace_files = await utils.workspace_files(workspace_directory)
     messages.append(types.Content(role="user", parts=[types.Part(text=workspace_files), types.Part(text=user_prompt)]))
+    logging.warning("Calling Gemini")
+    starTime = time.time()
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=messages,
         config=config,
     )
+    logging.warning(f"Gemini request completed in {time.time() - starTime} ")
     response_parts = response.candidates[0].content.parts
     messages.append(types.Content(role="model", parts = response_parts))
     utils.save_messages(messages_file_path, messages)
@@ -79,11 +83,13 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
         workspace_files = await utils.workspace_files(workspace_directory)
         messages.append(types.Content(role="user", parts=[types.Part(text=workspace_files)] + parts))
         messages += uploaded_files # Take care of uploaded files
+        startTime = time.time()
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=messages,
             config=config,
         )
+        logging.warning(f"Gemini request completed in {time.time() - starTime} ")
         response_parts = response.candidates[0].content.parts
         messages.append(types.Content(role="model", parts = response_parts))
         utils.save_messages(messages_file_path, messages)
