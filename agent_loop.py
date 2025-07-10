@@ -41,6 +41,9 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
     )
     logging.warning(f"Gemini request completed in {time.time() - startTime} ")
     response_parts = response.candidates[0].content.parts
+    if response_parts is None:
+        logging.warning("Respond Parts is None...?")
+        return messages
     messages.append(types.Content(role="model", parts = response_parts))
     utils.save_messages(messages_file_path, messages)
     print(response.text)
@@ -91,6 +94,9 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
         )
         logging.warning(f"Gemini request completed in {time.time() - startTime} ")
         response_parts = response.candidates[0].content.parts
+        if response_parts is None:
+            logging.warning("Respond Parts is None...?")
+            return messages
         messages.append(types.Content(role="model", parts = response_parts))
         utils.save_messages(messages_file_path, messages)
         print(response.text)
