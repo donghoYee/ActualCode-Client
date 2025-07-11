@@ -27,7 +27,9 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
     function_declarations = mobileTool.definitions + editTool.definitions + bashTool.definitions + searchTool.definitions + webFetchTool.definitions + multimediaReaderTool.definitions
     tools = types.Tool(function_declarations=function_declarations)
     config = types.GenerateContentConfig(tools=[tools, ], 
-                                         system_instruction=prompt.SYSTEM_PROMPT,                                    
+                                         system_instruction=prompt.SYSTEM_PROMPT, 
+                                         temperature=0.0,
+                                         #media_resolution="MEDIA_RESOLUTION_HIGH", # this doesn't work?                                 
     )
     
     workspace_files = await utils.workspace_files(workspace_directory)
@@ -87,6 +89,7 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
         messages.append(types.Content(role="user", parts=[types.Part(text=workspace_files)] + parts))
         messages += uploaded_files # Take care of uploaded files
         startTime = time.time()
+        logging.warning("Calling Gemini")
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=messages,
