@@ -27,40 +27,52 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
     function_declarations = mobileTool.definitions + editTool.definitions + bashTool.definitions + searchTool.definitions + webFetchTool.definitions + multimediaReaderTool.definitions
     tools = types.Tool(function_declarations=function_declarations)
     config = types.GenerateContentConfig(tools=[tools, ], 
-                                         system_instruction=prompt.SYSTEM_PROMPT, 
+                                         system_instruction=None, # Experimental -> do not put system prompt.
                                          temperature=0.0,
                                          #media_resolution="MEDIA_RESOLUTION_HIGH", # this doesn't work?                                 
     )
+    if len(messages) == 0: # First, add system prompt
+        messages.append(types.Content(role="user", parts=[types.Part(text=prompt.SYSTEM_PROMPT)]))
+        messages.append(types.Content(role="model", parts=[types.Part(text="Understood.")]))
+
     
     workspace_files = await utils.workspace_files(workspace_directory)
     messages.append(types.Content(role="user", parts=[types.Part(text=workspace_files), types.Part(text=user_prompt)]))
+    
     logging.warning("Calling Gemini")
     startTime = time.time()
-    response = client.models.generate_content(
+    response = client.models.generate_content_stream(
         model="gemini-2.5-flash",
         contents=messages,
         config=config,
     )
-    logging.warning(f"Gemini request completed in {time.time() - startTime} ")
-    response_parts = response.candidates[0].content.parts
-    if response_parts is None:
-        logging.warning("Respond Parts is None...?")
-        return messages
-    messages.append(types.Content(role="model", parts = response_parts))
+    response_text = ""
+    response_function_calls = []
+    for chunk in response:
+        parts = chunk.candidates[0].content.parts
+        for part in parts:
+            if part.text:
+                response_text += part.text
+                print(part.text, end="")
+            if part.function_call:
+                response_function_calls.append(part.function_call)
+    print()
+    logging.warning(f"Gemini response complete in {time.time() - startTime}")
+    
+    
+    messages.append(types.Content(role="model", parts = [types.Part(text=response_text)] + [types.Part.from_function_call(name=function_call.name, args=function_call.args) for function_call in response_function_calls]))
     utils.save_messages(messages_file_path, messages)
-    print(response.text)
     
     iter = 0
     while iter < MAX_ITER:
         iter += 1
         logging.info(f"In Agent Loop iter: {iter}")
-        function_call_datas = [response_part.function_call for response_part in response_parts if response_part.function_call is not None]
-        if len(function_call_datas) == 0: break # No function called. Job done
+        if len(response_function_calls) == 0: break # No function called. Job done
         parts = []
         uploaded_files = []
         tasks = []
         
-        for function_call_data in function_call_datas:
+        for function_call_data in response_function_calls:
             function_args = function_call_data.args
             function_name = function_call_data.name
             if function_name == "request_photo_tool":
@@ -88,24 +100,30 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
         workspace_files = await utils.workspace_files(workspace_directory)
         messages.append(types.Content(role="user", parts=[types.Part(text=workspace_files)] + parts))
         messages += uploaded_files # Take care of uploaded files
-        startTime = time.time()
+        
         logging.warning("Calling Gemini")
-        response = client.models.generate_content(
+        startTime = time.time()
+        response = client.models.generate_content_stream(
             model="gemini-2.5-flash",
             contents=messages,
             config=config,
         )
-        logging.warning(f"Gemini request completed in {time.time() - startTime} ")
-        response_parts = response.candidates[0].content.parts
-        if response_parts is None:
-            logging.warning("Respond Parts is None...?")
-            return messages
-        messages.append(types.Content(role="model", parts = response_parts))
+        response_text = ""
+        response_function_calls = []
+        for chunk in response:
+            parts = chunk.candidates[0].content.parts
+            for part in parts:
+                if part.text:
+                    response_text += part.text
+                    print(part.text, end="")
+                if part.function_call:
+                    response_function_calls.append(part.function_call)
+        print()
+        logging.warning(f"Gemini response complete in {time.time() - startTime}")
+        
+        messages.append(types.Content(role="model", parts = [types.Part(text=response_text)] + [types.Part.from_function_call(name=function_call.name, args=function_call.args) for function_call in response_function_calls]))
         utils.save_messages(messages_file_path, messages)
-        print(response.text)
 
-
-    
     return messages
 
 

@@ -63,7 +63,7 @@ class _BashSession:
     _process: asyncio.subprocess.Process
 
     command: str = "/bin/bash"
-    _output_delay: float = 0.2  # seconds
+    _output_delay: float = 0.5  # seconds
     _timeout: float = 300.0  # seconds
     _sentinel: str = "<<exit>>"
 

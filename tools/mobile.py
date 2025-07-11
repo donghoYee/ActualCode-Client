@@ -3,6 +3,8 @@ import asyncio
 import time
 import os
 
+import certifi
+import ssl
 
 
 class MobileTool:
@@ -52,10 +54,12 @@ class MobileTool:
         notification_data = {
             "notification_type": "image",
             "instruction": instruction,
-            "actualcode_api_token": self.actualcode_api_key,
+            "actualcode_api_key": self.actualcode_api_key,
         }
-        async with aiohttp.ClientSession() as session:
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
             notification_response = await self.make_request(session, self.send_notification_url, notification_data)
+            print(notification_response)
             notification_id = notification_response["notification_id"]
 
             startTime = time.time()
@@ -87,13 +91,15 @@ class MobileTool:
                 "text": f"Error in request_photo_tool. Reason: timed out while waiting for photo"
             }
 
+
     async def request_video_tool(self, instruction: str, fps=1, timeout=60*10) -> list:
         notification_data = {
             "notification_type": "video",
             "instruction": instruction,
-            "actualcode_api_token": self.actualcode_api_key,
+            "actualcode_api_key": self.actualcode_api_key,
         }
-        async with aiohttp.ClientSession() as session:
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
             notification_response = await self.make_request(session, self.send_notification_url, notification_data)
             notification_id = notification_response["notification_id"]
 

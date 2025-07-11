@@ -98,8 +98,10 @@ class SearchTool():
         sources_section = ""
         if source_list_formatted:
             sources_section += "\n\nSources:\n" + "\n".join(source_list_formatted)
-        if rendered_content:
-            sources_section += "\n\nSearch Widget Preview:\n" + rendered_content
+            
+        ## It seems we don't need that
+        # if rendered_content:
+        #     sources_section += "\n\nSearch Widget Preview:\n" + rendered_content
 
         modified_response_text += sources_section
 

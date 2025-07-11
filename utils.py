@@ -8,6 +8,8 @@ import asyncio
 from urllib.parse import urlparse
 from tools.run import run
 import platform, socket, re, uuid, json, psutil
+import certifi
+import ssl
 
 
 def load_messages(file_path: str) -> list:
@@ -27,11 +29,7 @@ def save_messages(file_path: str, messages: list) -> None:
         return 
     
     
-import os
-import aiohttp
-import aiofiles
-import asyncio
-from urllib.parse import urlparse
+
 
 async def download_file(session, url, folder):
     try:
@@ -55,7 +53,8 @@ async def download_file(session, url, folder):
 
 async def download_files(urls, folder):
     os.makedirs(folder, exist_ok=True)
-    async with aiohttp.ClientSession() as session:
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
         tasks = [download_file(session, url, folder) for url in urls]
         return await asyncio.gather(*tasks)
 
