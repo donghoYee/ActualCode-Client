@@ -113,6 +113,7 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
         for chunk in response:
             if chunk.candidates[0].content is None: continue
             parts = chunk.candidates[0].content.parts
+            if parts is None: continue
             for part in parts:
                 if part.text:
                     response_text += part.text
