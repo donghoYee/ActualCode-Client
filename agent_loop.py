@@ -111,6 +111,7 @@ async def run_agent(user_prompt: str, messages: list, workspace_directory: str) 
         response_text = ""
         response_function_calls = []
         for chunk in response:
+            if chunk.candidates[0].content is None: continue
             parts = chunk.candidates[0].content.parts
             for part in parts:
                 if part.text:
